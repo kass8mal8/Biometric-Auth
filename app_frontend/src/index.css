@@ -1,0 +1,17 @@
+@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+	font-family: "inconsolata";
+	src: url(./assets/font/Poppins-Regular.ttf);
+	font-weight: normal;
+	font-style: normal;
+}
+
+@layer base {
+	body {
+		font-family: "inconsolata"; /* Replace with your font */
+	}
+}

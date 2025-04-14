@@ -1,0 +1,268 @@
+import { useState, useEffect, useRef } from "react";
+import illustration from "../../assets/images/illustration.png";
+import Switch from "./Switch";
+import usePost from "../../hooks/usePost";
+import pass_visible from "../../assets/images/pass_visible.png";
+import pass_hidden from "../../assets/images/pass_hidden.png";
+import Otp from "./Otp";
+import { useAuthContext } from "../../context/AuthContext";
+import axiosInstance from "../../utils/axiosInstance";
+
+const Auth = () => {
+	const [isSignup, setIsSignup] = useState(false);
+	const { post, loading } = usePost(`/auth/${isSignup ? "signup" : "signin"}`);
+	const [userDetails, setUserDetails] = useState({
+		admission_number: "",
+		email: null,
+		password: "",
+	});
+	const [isVisible, setIsVisible] = useState(false);
+	const [isOpen, setIsOpen] = useState(false);
+	const modalRef = useRef();
+	const { user } = useAuthContext();
+
+	const handleInputChange = async (e) => {
+		const { name, value } = e.target;
+		setUserDetails({ ...userDetails, [name]: value });
+	};
+
+	const handleAuth = async (e) => {
+		e.preventDefault();
+		try {
+			// Step 1: Signup or Signin
+			const res = await post(userDetails);
+
+			// Step 2: Handle passkey registration or verification
+			if (isSignup) {
+				await registerPasskey(userDetails?.email); // Register passkey during signup
+			} else {
+				await verifyPasskey(userDetails?.email); // Verify passkey during signin
+			}
+
+			console.log("Response:", res);
+			!isSignup ? setIsOpen(true) : setIsSignup(false);
+		} catch (error) {
+			console.log("Error:", error);
+		}
+	};
+
+	const handleClose = (e) => {
+		setIsOpen(false);
+		modalRef.current?.close();
+	};
+
+	useEffect(() => {
+		if (isOpen) modalRef.current?.showModal();
+	}, [isOpen, userDetails]);
+
+	// Helper to convert base64url to Uint8Array
+	const base64urlToUint8Array = (base64url) => {
+		const padding = "=".repeat((4 - (base64url.length % 4)) % 4);
+		const base64 = (base64url + padding).replace(/-/g, "+").replace(/_/g, "/");
+		return Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+	};
+
+	// Helper to convert Uint8Array to base64url
+	const uint8ArrayToBase64url = (array) => {
+		const base64 = btoa(String.fromCharCode(...array));
+		return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+	};
+
+	// Function to register a passkey during signup
+	const registerPasskey = async (email) => {
+		try {
+			// Step 1: Fetch registration challenge
+			const response = await axiosInstance.get(
+				`/auth/generate-registration-challenge/${email}`
+			);
+			const options = response.data;
+
+			// Debugging: Log the backend response
+			console.log("Options from backend:", options);
+
+			if (!options.challenge || !options.user.id) {
+				throw new Error(
+					"Invalid backend response: Missing challenge or user ID"
+				);
+			}
+
+			// Step 2: Create passkey credential
+			const publicKey = {
+				challenge: base64urlToUint8Array(options.challenge),
+				rp: options.rp,
+				user: {
+					id: base64urlToUint8Array(options.user.id),
+					name: email,
+					displayName: email,
+				},
+				pubKeyCredParams: options.pubKeyCredParams,
+				authenticatorSelection: {
+					authenticatorAttachment: "platform",
+					userVerification: "preferred",
+				},
+				timeout: options.timeout,
+			};
+
+			const credential = await navigator.credentials.create({ publicKey });
+			console.log("Credential created:", credential);
+
+			// Step 3: Send credential to server for storage
+			const credentialData = {
+				id: credential.id,
+				rawId: uint8ArrayToBase64url(credential.rawId),
+				type: credential.type,
+				response: {
+					clientDataJSON: uint8ArrayToBase64url(
+						credential.response.clientDataJSON
+					),
+					attestationObject: uint8ArrayToBase64url(
+						credential.response.attestationObject
+					),
+				},
+			};
+
+			const saveResponse = await axiosInstance.post("/auth/save-passkey", {
+				email,
+				credential: credentialData,
+			});
+
+			if (saveResponse.status === 200) {
+				console.log("Passkey registered successfully!");
+			} else {
+				throw new Error("Failed to save passkey on server");
+			}
+		} catch (error) {
+			console.log(error.message);
+		}
+	};
+
+	// Function to verify a passkey during signin
+	const verifyPasskey = async (email) => {
+		try {
+			// Step 1: Fetch authentication challenge
+			const response = await axiosInstance.get(
+				`/auth/generate-authentication-challenge/${email}`
+			);
+			const options = response.data;
+
+			if (!options.challenge || !options.allowCredentials) {
+				throw new Error(
+					"Invalid backend response: Missing challenge or allowed credentials"
+				);
+			}
+
+			// Step 2: Request passkey authentication
+			const publicKey = {
+				challenge: base64urlToUint8Array(options.challenge),
+				rpId: options.rpId,
+				allowCredentials: options.allowCredentials.map((cred) => ({
+					id: base64urlToUint8Array(cred.id),
+					type: cred.type,
+					transports: cred.transports,
+				})),
+				userVerification: "preferred",
+			};
+
+			const assertion = await navigator.credentials.get({ publicKey });
+
+			// Step 3: Send assertion to server for verification
+			const assertionData = {
+				id: assertion.id,
+				rawId: uint8ArrayToBase64url(assertion.rawId),
+				type: assertion.type,
+				response: {
+					clientDataJSON: uint8ArrayToBase64url(
+						assertion.response.clientDataJSON
+					),
+					authenticatorData: uint8ArrayToBase64url(
+						assertion.response.authenticatorData
+					),
+					signature: uint8ArrayToBase64url(assertion.response.signature),
+					userHandle: assertion.response.userHandle
+						? uint8ArrayToBase64url(assertion.response.userHandle)
+						: null,
+				},
+			};
+
+			const verifyResponse = await axiosInstance.post("/auth/verify-passkey", {
+				email,
+				assertion: assertionData,
+			});
+
+			if (verifyResponse.status === 200) {
+				console.log("Passkey verified successfully!");
+			} else {
+				throw new Error("Failed to verify passkey on server");
+			}
+		} catch (error) {
+			console.log(error.message);
+		}
+	};
+	return (
+		<div className="md:flex justify-between items-center h-screen">
+			<div className="w-[100vw] h-[45vh] md:h-auto md:w-2/3 bg-gray-700 md:rounded-tr-4xl md:rounded-br-4xl">
+				<img
+					src={illustration}
+					alt="illustration"
+					className="w-2/3 mx-auto md:w-full"
+				/>
+			</div>
+			<form
+				className="relative bottom-0 w-full ml-4 md:w-3/4 mx-auto"
+				onSubmit={handleAuth}
+			>
+				<Switch setIsSignup={setIsSignup} isSignup={isSignup} />
+
+				<input
+					type="email"
+					placeholder="Email"
+					name="email"
+					onChange={handleInputChange}
+					className="p-3 focus:outline-none border border-neutral-400 rounded-full block mx-auto my-4 w-full md:w-[45%]"
+				/>
+				{isSignup && (
+					<input
+						type="text"
+						placeholder="admission_number"
+						name="admission_number"
+						onChange={handleInputChange}
+						className="p-3 focus:outline-none border border-neutral-400 rounded-full block mx-auto my-3 w-full md:w-[45%]"
+					/>
+				)}
+
+				<aside className="relative">
+					<input
+						type={isVisible ? "text" : "password"}
+						placeholder="Password"
+						name="password"
+						onChange={handleInputChange}
+						className="p-3 focus:outline-none border border-neutral-400 rounded-full block mx-auto my-4 w-full md:w-[45%]"
+					/>
+					<img
+						src={!isVisible ? pass_visible : pass_hidden}
+						alt="visibility"
+						onClick={() => setIsVisible(!isVisible)}
+						className="w-5 cursor-pointer absolute right-3 md:right-[30%] top-5 opacity-50"
+					/>
+				</aside>
+				<button
+					type="submit"
+					className={`mx-auto w-full md:w-[45%] text-white bg-gray-800 p-3 rounded-full block my-2 ${
+						loading && "bg-neutral-200 text-black"
+					}`}
+				>
+					{loading ? "processing..." : isSignup ? "Signup" : "Signin"}
+				</button>
+			</form>
+			<dialog
+				ref={modalRef}
+				onClick={handleClose}
+				className="mx-auto h-full md:h-[55%] mt-[50%] md:mt-[10%] p-0  md:mb-auto py-5 px-2 w-full md:w-[60%] rounded-2xl max-w-[50ch] backdrop:opacity-50 backdrop:bg-black"
+			>
+				<Otp email={userDetails?.email} />
+			</dialog>
+		</div>
+	);
+};
+
+export default Auth;
