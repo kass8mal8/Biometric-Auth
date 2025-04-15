@@ -175,29 +175,6 @@ const Auth = () => {
 			}
 		} catch (error) {
 			console.error("Passkey registration failed:", error);
-			let errorMessage = "Failed to register passkey. Please try again.";
-			if (error.message.includes("Failed to decode base64url")) {
-				errorMessage =
-					"Invalid data received from server. Please contact support.";
-			} else if (error.name === "NotSupportedError") {
-				errorMessage =
-					"Passkey authentication is not supported on this device. Please ensure Windows Hello is configured (PIN or biometric) or use OTP instead.";
-			} else if (error.name === "NotAllowedError") {
-				errorMessage =
-					"Passkey registration failed. Ensure your device supports platform authenticators and Windows Hello is enabled.";
-			} else if (error.name === "SecurityError") {
-				errorMessage =
-					"Security error: The domain does not match the relying party ID. Please check the server configuration.";
-			} else if (error.name === "AbortError") {
-				errorMessage =
-					"Passkey registration was cancelled or timed out. Please try again.";
-			} else if (error.response) {
-				errorMessage = `Server error: ${error.response.data.message}`;
-			} else {
-				errorMessage = `Error: ${error.message || "An unknown error occurred"}`;
-			}
-			alert(errorMessage);
-			throw error; // Re-throw to ensure the error is visible in the console
 		}
 	};
 
