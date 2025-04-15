@@ -6,6 +6,7 @@ const {
 	castVote,
 	getVoteStatus,
 	checkIpForThreats,
+	getVotes,
 } = require("../controllers/vote");
 const rateLimit = require("express-rate-limit");
 
@@ -45,5 +46,5 @@ router.get(
 	[check("user_id").isMongoId().withMessage("Invalid user ID"), validate],
 	getVoteStatus
 );
-
+router.get("/:year", getVotes);
 module.exports = router;

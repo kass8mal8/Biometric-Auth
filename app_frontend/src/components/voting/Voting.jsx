@@ -6,6 +6,7 @@ import {
 	GoogleReCaptchaProvider,
 	useGoogleReCaptcha,
 } from "react-google-recaptcha-v3";
+import { useNavigate } from "react-router-dom";
 
 const Voting = ({
 	selectedCandidates,
@@ -27,7 +28,7 @@ const Voting = ({
 	const { data: candidates } = useFetch(url, "candidates", {
 		Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
 	});
-	console.log("Candidates", candidates);
+	const navigate = useNavigate();
 
 	useEffect(() => {
 		if (candidates) {
@@ -79,6 +80,7 @@ const Voting = ({
 				);
 
 				setIsSubmitted(true);
+				navigate("/results");
 			} catch (error) {
 				if (error.response && error.response.data) {
 					console.log(error.response.data.message);
@@ -109,12 +111,6 @@ const Voting = ({
 			}
 		});
 	};
-
-	// useEffect(() => {
-	// 	if (!isSubmitted) {
-	// 		setIsSubmitted(true);
-	// 	}
-	// }, [isSubmitted]);
 	console.log("State", isSubmitted);
 
 	return (

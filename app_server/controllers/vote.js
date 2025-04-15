@@ -171,10 +171,65 @@ const checkIpForThreats = async (req, res, next) => {
 };
 
 //TODO: implement getting votes for specific year
+const getVotes = async (req, res) => {
+	const { year } = req.params;
+	try {
+		// Step 1: Fetch votes for the specified year
+		const votes = await Vote.find({
+			$expr: { $eq: [{ $year: "$createdAt" }, +year] },
+		});
+
+		if (!votes || votes.length === 0) {
+			return res.status(404).json({ message: "No votes found for this year" });
+		}
+
+		// Step 2: Count votes for each candidate
+		const voteCounts = {};
+		votes.forEach((vote) => {
+			vote.candidate_ids.forEach((candidateId) => {
+				voteCounts[candidateId] = (voteCounts[candidateId] || 0) + 1;
+			});
+		});
+
+		// Step 3: Determine the winner(s)
+		const maxVotes = Math.max(...Object.values(voteCounts));
+		const winners = Object.keys(voteCounts).filter(
+			(candidateId) => voteCounts[candidateId] === maxVotes
+		);
+
+		// Step 4: Fetch winner details from the Candidate collection
+		const winnerDetails = await Candidate.find({ _id: { $in: winners } });
+
+		// Step 5: Fetch all candidate details for vote counts
+		const allCandidates = await Candidate.find({
+			_id: { $in: Object.keys(voteCounts) },
+		});
+
+		// Step 6: Map vote counts to candidate details
+		const candidateVoteDetails = allCandidates.map((candidate) => ({
+			_id: candidate._id,
+			name: candidate.name,
+			party: candidate.party,
+			votes: voteCounts[candidate._id] || 0,
+		}));
+
+		// Step 7: Send the response
+		res.status(200).json({
+			votes,
+			winner: winnerDetails,
+			maxVotes,
+			voteCounts: candidateVoteDetails,
+		});
+	} catch (error) {
+		console.error("Error fetching votes:", error);
+		res.status(500).json({ message: "Server error" });
+	}
+};
 
 module.exports = {
 	authenticate,
 	castVote,
 	getVoteStatus,
 	checkIpForThreats,
+	getVotes,
 };

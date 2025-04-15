@@ -8,6 +8,7 @@ const {
 	refreshAccessToken,
 	generateRegistrationChallenge,
 	savePasskey,
+	generateAuthenticationChallenge,
 } = require("../controllers/users");
 const router = new Router();
 
@@ -22,6 +23,10 @@ router.post("/refresh_token", refreshAccessToken);
 router.get(
 	"/generate-registration-challenge/:email",
 	generateRegistrationChallenge
+);
+router.get(
+	"/generate-authentication-challenge/:email",
+	generateAuthenticationChallenge
 );
 router.post("/save-passkey", savePasskey);
 

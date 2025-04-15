@@ -5,6 +5,7 @@ const { SECRET_KEY, ACCESS_TOKEN_EXPIRY, EMAIL_ADDRESS, APP_PASSWORD } =
 	process.env;
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
+const { generateAuthenticationOptions } = require("@simplewebauthn/server");
 
 const transporter = nodemailer.createTransport({
 	service: "gmail",
@@ -271,7 +272,45 @@ const savePasskey = async (req, res) => {
 	}
 };
 
-module.exports = { generateRegistrationChallenge, savePasskey };
+const generateAuthenticationChallenge = async (req, res) => {
+	const { email } = req.params;
+
+	try {
+		const user = await User.findOne({ email });
+		if (!user) {
+			return res.status(404).json({ message: "User not found" });
+		}
+
+		// Check if the user has any passkeys
+		if (!user.passkeys || user.passkeys.length === 0) {
+			return res
+				.status(400)
+				.json({ message: "No passkeys registered for this user" });
+		}
+
+		console.log("User passkeys:", user.passkeys);
+
+		// Generate authentication options
+		const options = generateAuthenticationOptions({
+			rpID: "localhost", // Replace with your domain in production
+			userVerification: "preferred",
+			allowCredentials: user.passkeys.map((passkey) => ({
+				id: passkey.credentialId,
+				type: "public-key",
+				transports: ["internal"], // Prioritize platform authenticators
+			})),
+		});
+
+		// Save the challenge to the user record (or session) for later verification
+		user.currentChallenge = options.challenge;
+		await user.save();
+
+		res.status(200).json(options);
+	} catch (error) {
+		console.error("Error generating authentication challenge:", error);
+		res.status(500).json({ message: "Server error" });
+	}
+};
 
 module.exports = {
 	signup,
@@ -283,4 +322,5 @@ module.exports = {
 	getUser,
 	generateRegistrationChallenge,
 	savePasskey,
+	generateAuthenticationChallenge,
 };

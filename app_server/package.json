@@ -13,6 +13,7 @@
 	"description": "",
 	"dependencies": {
 		"@fingerprintjs/fingerprintjs": "^4.6.1",
+		"@simplewebauthn/server": "^13.1.1",
 		"axios": "^1.7.9",
 		"bcrypt": "^5.1.1",
 		"body-parser": "^1.20.3",

@@ -5,6 +5,8 @@ import useFetch from "../../hooks/useFetch";
 import { useState, useEffect } from "react";
 import Message from "./Message";
 import NotAllowed from "./NotAllowed";
+import Results from "./Results";
+import { useNavigate } from "react-router-dom";
 const Vote = () => {
 	const { user } = useAuthContext();
 	const faculties = {
@@ -15,6 +17,7 @@ const Vote = () => {
 		SST: "FoSST",
 		MCS: "FAMECO",
 	};
+	const navigate = useNavigate();
 
 	const [isSubmitted, setIsSubmitted] = useState(false);
 	const [isVotingAllowed, setIsVotingAllowed] = useState(true);
@@ -49,6 +52,13 @@ const Vote = () => {
 		return () => clearInterval(interval);
 	}, []);
 
+	// Watch for changes in `status` and navigate to results if `status` is true
+	useEffect(() => {
+		if (status) {
+			navigate("/results");
+		}
+	}, [status, navigate]);
+
 	return (
 		<div className="left-1/2 -translate-x-1/2 ml-4 container mx-auto relative ">
 			{data && (
@@ -56,7 +66,7 @@ const Vote = () => {
 					{isVotingAllowed ? (
 						<>
 							{status ? (
-								<>{isSubmitted ? <Message /> : <Message />}</>
+								<>{isSubmitted ? <Message /> : <Results />}</>
 							) : (
 								<Voting
 									requiredVotes={data[0]?.requiredVotes}

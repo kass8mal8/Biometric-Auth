@@ -7,7 +7,16 @@ import { isAxiosError } from "axios";
 const AuthContext = createContext(undefined);
 
 export const AuthProvider = ({ children }) => {
-	const [user, setUser] = useState(null);
+	const [user, setUser] = useState(() => {
+		// Retrieve user from localStorage on initialization
+		const storedUser = localStorage.getItem("user");
+		try {
+			return storedUser ? JSON.parse(storedUser) : null;
+		} catch (error) {
+			console.error("Failed to parse user from localStorage:", error);
+			return null;
+		}
+	});
 
 	useEffect(() => {
 		const fetchProfile = async () => {
@@ -17,13 +26,23 @@ export const AuthProvider = ({ children }) => {
 						Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
 					},
 				});
-				setUser(res.data?.user);
+				console.log("Response:", res.data);
+				setUser(res?.data);
+				// Save user to localStorage
+				localStorage.setItem("user", JSON.stringify(res?.data));
 			} catch (error) {
 				isAxiosError(error) && console.log(error.message);
+				// Clear user data if the profile fetch fails
+				localStorage.removeItem("user");
+				localStorage.removeItem("accessToken");
+				setUser(null);
 			}
 		};
 
-		fetchProfile();
+		// Only fetch profile if user is not already in localStorage
+		if (!user) {
+			fetchProfile();
+		}
 	}, []);
 
 	return (

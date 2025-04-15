@@ -7,6 +7,7 @@ import Header from "./components/navigation/Header";
 import BottomNav from "./components/navigation/BottomNav";
 import { useState } from "react";
 import Positions from "./components/voting/Positions";
+import Results from "./components/voting/Results";
 
 function App() {
 	const location = useLocation();
@@ -27,6 +28,7 @@ function App() {
 					<Route path="/" element={<Home setActiveLink={setActiveLink} />} />
 					<Route path="/positions" element={<Positions />} />
 					<Route path="/vote" element={<Vote />} />
+					<Route path="/results" element={<Results />} />
 				</Routes>
 			</div>
 		</AuthProvider>
