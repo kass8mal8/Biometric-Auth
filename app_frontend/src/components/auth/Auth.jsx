@@ -7,6 +7,7 @@ import pass_hidden from "../../assets/images/pass_hidden.png";
 import Otp from "./Otp";
 import { useAuthContext } from "../../context/AuthContext";
 import axiosInstance from "../../utils/axiosInstance";
+import { useNavigate } from "react-router-dom";
 
 const Auth = () => {
 	const [isSignup, setIsSignup] = useState(false);
@@ -20,6 +21,7 @@ const Auth = () => {
 	const [isOpen, setIsOpen] = useState(false);
 	const modalRef = useRef();
 	const { user } = useAuthContext();
+	const navigate = useNavigate();
 
 	const handleInputChange = async (e) => {
 		const { name, value } = e.target;

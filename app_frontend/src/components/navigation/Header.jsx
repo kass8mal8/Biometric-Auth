@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useAuthContext } from "../../context/AuthContext";
 import profile from "../../assets/images/profile.png";
+import { useNavigate } from "react-router-dom";
 
 const Header = () => {
 	const { user } = useAuthContext();
@@ -8,6 +9,7 @@ const Header = () => {
 	const [greeting, setGreeting] = useState("");
 	console.log(user);
 
+	const navigate = useNavigate();
 	const getGreeting = (hour) => {
 		if (hour >= 0 && hour < 12) {
 			return "Good Morning";
@@ -17,6 +19,10 @@ const Header = () => {
 			return "Good Evening";
 		}
 	};
+
+	if (user === null) {
+		navigate("/auth");
+	}
 
 	useEffect(() => {
 		setGreeting(getGreeting(currentHour));
