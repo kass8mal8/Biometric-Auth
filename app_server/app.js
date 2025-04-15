@@ -19,7 +19,7 @@ app.use(
 		origin: (origin, callback) => {
 			const allowedOrigins = [
 				"http://localhost:5173", // Local frontend
-				"https://mmuvoting.vercel.app", // Production frontend
+				"https://biometricvote.vercel.app", // Production frontend
 				"https://another-allowed-origin.com", // Another allowed origin
 			];
 
