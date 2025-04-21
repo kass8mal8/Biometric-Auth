@@ -1,4 +1,4 @@
-const { Schema, model } = require("mongoose");
+const { Schema, model } = require('mongoose');
 
 const candidateSchema = new Schema({
 	admission_number: {
@@ -16,18 +16,18 @@ const candidateSchema = new Schema({
 	candidacy_status: {
 		type: String,
 		required: true,
-		enum: ["Nominated", "Qualified", "Disqualified", "Pending"],
-		default: "Pending",
+		enum: ['Nominated', 'Qualified', 'Disqualified', 'Pending'],
+		default: 'Pending',
 	},
 	createdAt: {
 		type: Date,
 		default: Date.now,
 	},
-	telephone: {
+	email: {
 		type: String,
 		required: true,
 		unique: true,
 	},
 });
 
-module.exports = model("Candidate", candidateSchema);
+module.exports = model('Candidate', candidateSchema);

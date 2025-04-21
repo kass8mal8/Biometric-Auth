@@ -1,21 +1,23 @@
-import { useState, useEffect, useRef } from "react";
-import illustration from "../../assets/images/illustration.png";
-import Switch from "./Switch";
-import usePost from "../../hooks/usePost";
-import pass_visible from "../../assets/images/pass_visible.png";
-import pass_hidden from "../../assets/images/pass_hidden.png";
-import Otp from "./Otp";
-import { useAuthContext } from "../../context/AuthContext";
-import axiosInstance from "../../utils/axiosInstance";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useRef } from 'react';
+import illustration from '../../assets/images/illustration.png';
+import Switch from './Switch';
+import usePost from '../../hooks/usePost';
+import pass_visible from '../../assets/images/pass_visible.png';
+import pass_hidden from '../../assets/images/pass_hidden.png';
+import Otp from './Otp';
+import { useAuthContext } from '../../context/AuthContext';
+import axiosInstance from '../../utils/axiosInstance';
+import { useNavigate } from 'react-router-dom';
 
 const Auth = () => {
 	const [isSignup, setIsSignup] = useState(false);
-	const { post, loading } = usePost(`/auth/${isSignup ? "signup" : "signin"}`);
+	const { post, loading } = usePost(
+		`/auth/${isSignup ? 'signup' : 'signin'}`
+	);
 	const [userDetails, setUserDetails] = useState({
-		admission_number: "",
+		admission_number: '',
 		email: null,
-		password: "",
+		password: '',
 	});
 	const [isVisible, setIsVisible] = useState(false);
 	const [isOpen, setIsOpen] = useState(false);
@@ -43,7 +45,7 @@ const Auth = () => {
 				// await verifyPasskey(userDetails?.email); // Verify passkey during signin
 			}
 		} catch (error) {
-			console.log("Error:", error);
+			console.log('Error:', error);
 		}
 	};
 
@@ -59,20 +61,20 @@ const Auth = () => {
 	// Helper to convert base64url to Uint8Array
 	const base64urlToUint8Array = (base64url) => {
 		try {
-			if (!base64url || typeof base64url !== "string") {
-				throw new Error("Base64url input must be a non-empty string");
+			if (!base64url || typeof base64url !== 'string') {
+				throw new Error('Base64url input must be a non-empty string');
 			}
 			// Ensure the input is a valid base64url string
 			if (!/^[A-Za-z0-9\-_]+$/.test(base64url)) {
-				throw new Error("Invalid base64url format");
+				throw new Error('Invalid base64url format');
 			}
-			const padding = "=".repeat((4 - (base64url.length % 4)) % 4);
+			const padding = '='.repeat((4 - (base64url.length % 4)) % 4);
 			const base64 = (base64url + padding)
-				.replace(/-/g, "+")
-				.replace(/_/g, "/");
+				.replace(/-/g, '+')
+				.replace(/_/g, '/');
 			const decoded = atob(base64);
 			if (!decoded) {
-				throw new Error("Decoded base64url string is empty");
+				throw new Error('Decoded base64url string is empty');
 			}
 			return Uint8Array.from(decoded, (c) => c.charCodeAt(0));
 		} catch (error) {
@@ -84,7 +86,10 @@ const Auth = () => {
 	const uint8ArrayToBase64url = (array) => {
 		try {
 			const base64 = btoa(String.fromCharCode(...array));
-			return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+			return base64
+				.replace(/\+/g, '-')
+				.replace(/\//g, '_')
+				.replace(/=+$/, '');
 		} catch (error) {
 			throw new Error(`Failed to encode base64url: ${error.message}`);
 		}
@@ -99,23 +104,27 @@ const Auth = () => {
 			const options = response.data;
 
 			// Debugging: Log the backend response
-			console.log("Options from backend:", options);
+			console.log('Options from backend:', options);
 
 			// Validate options
-			if (!options || typeof options !== "object") {
-				throw new Error("Invalid backend response: Options is not an object");
-			}
-			if (!options.challenge || typeof options.challenge !== "string") {
+			if (!options || typeof options !== 'object') {
 				throw new Error(
-					"Invalid backend response: Missing or invalid challenge"
+					'Invalid backend response: Options is not an object'
+				);
+			}
+			if (!options.challenge || typeof options.challenge !== 'string') {
+				throw new Error(
+					'Invalid backend response: Missing or invalid challenge'
 				);
 			}
 			if (
 				!options.user ||
 				!options.user.id ||
-				typeof options.user.id !== "string"
+				typeof options.user.id !== 'string'
 			) {
-				throw new Error("Invalid backend response: Missing or invalid user ID");
+				throw new Error(
+					'Invalid backend response: Missing or invalid user ID'
+				);
 			}
 			if (
 				!options.rp ||
@@ -123,7 +132,7 @@ const Auth = () => {
 				!options.authenticatorSelection
 			) {
 				throw new Error(
-					"Invalid backend response: Missing required WebAuthn parameters"
+					'Invalid backend response: Missing required WebAuthn parameters'
 				);
 			}
 
@@ -138,14 +147,16 @@ const Auth = () => {
 				},
 				pubKeyCredParams: options.pubKeyCredParams,
 				authenticatorSelection: {
-					authenticatorAttachment: "platform",
-					userVerification: "preferred",
+					authenticatorAttachment: 'platform',
+					userVerification: 'preferred',
 				},
 				timeout: options.timeout || 60000, // Default to 60 seconds if not provided
 			};
 
-			const credential = await navigator.credentials.create({ publicKey });
-			console.log("Credential created:", credential);
+			const credential = await navigator.credentials.create({
+				publicKey,
+			});
+			console.log('Credential created:', credential);
 
 			// Step 3: Send credential to server for storage
 			const credentialData = {
@@ -162,90 +173,30 @@ const Auth = () => {
 				},
 			};
 
-			console.log("Credential data to send:", credentialData);
+			console.log('Credential data to send:', credentialData);
 
-			const saveResponse = await axiosInstance.post("/auth/save-passkey", {
-				email,
-				credential: credentialData,
-			});
+			const saveResponse = await axiosInstance.post(
+				'/auth/save-passkey',
+				{
+					email,
+					credential: credentialData,
+				}
+			);
 
 			if (saveResponse.status === 200) {
-				console.log("Passkey registered successfully!");
-				alert("Passkey registered successfully!");
+				console.log('Passkey registered successfully!');
+				alert('Passkey registered successfully!');
 			} else {
-				throw new Error("Failed to save passkey on server");
+				throw new Error('Failed to save passkey on server');
 			}
 		} catch (error) {
-			console.error("Passkey registration failed:", error);
+			console.error('Passkey registration failed:', error);
 		}
 	};
 
-	// Function to verify a passkey during signin
-	// const verifyPasskey = async (email) => {
-	// 	try {
-	// 		// Step 1: Fetch authentication challenge
-	// 		const response = await axiosInstance.get(
-	// 			`/auth/generate-authentication-challenge/${email}`
-	// 		);
-	// 		const options = response.data;
-	// 		console.log("Options from backend:", options);
-
-	// 		if (!options.challenge || !options.allowCredentials) {
-	// 			throw new Error(
-	// 				"Invalid backend response: Missing challenge or allowed credentials"
-	// 			);
-	// 		}
-
-	// 		// Step 2: Request passkey authentication
-	// 		const publicKey = {
-	// 			challenge: base64urlToUint8Array(options.challenge),
-	// 			rpId: options.rpId,
-	// 			allowCredentials: options.allowCredentials.map((cred) => ({
-	// 				id: base64urlToUint8Array(cred.id),
-	// 				type: cred.type,
-	// 				transports: cred.transports,
-	// 			})),
-	// 			userVerification: "preferred",
-	// 		};
-
-	// 		const assertion = await navigator.credentials.get({ publicKey });
-
-	// 		// Step 3: Send assertion to server for verification
-	// 		const assertionData = {
-	// 			id: assertion.id,
-	// 			rawId: uint8ArrayToBase64url(assertion.rawId),
-	// 			type: assertion.type,
-	// 			response: {
-	// 				clientDataJSON: uint8ArrayToBase64url(
-	// 					assertion.response.clientDataJSON
-	// 				),
-	// 				authenticatorData: uint8ArrayToBase64url(
-	// 					assertion.response.authenticatorData
-	// 				),
-	// 				signature: uint8ArrayToBase64url(assertion.response.signature),
-	// 				userHandle: assertion.response.userHandle
-	// 					? uint8ArrayToBase64url(assertion.response.userHandle)
-	// 					: null,
-	// 			},
-	// 		};
-
-	// 		const verifyResponse = await axiosInstance.post("/auth/verify-passkey", {
-	// 			email,
-	// 			assertion: assertionData,
-	// 		});
-
-	// 		if (verifyResponse.status === 200) {
-	// 			console.log("Passkey verified successfully!");
-	// 		} else {
-	// 			throw new Error("Failed to verify passkey on server");
-	// 		}
-	// 	} catch (error) {
-	// 		console.log(error.message);
-	// 	}
-	// };
 	return (
 		<div className="md:flex justify-between items-center h-screen">
-			<div className="w-[100vw] h-[45vh] md:h-auto md:w-2/3 bg-gray-700 md:rounded-tr-4xl md:rounded-br-4xl">
+			<div className="w-[100vw] h-[45vh] md:h-auto md:w-2/3 bg-gray-700 md:rounded-tr-4xl rounded-b-2xl">
 				<img
 					src={illustration}
 					alt="illustration"
@@ -277,7 +228,7 @@ const Auth = () => {
 
 				<aside className="relative">
 					<input
-						type={isVisible ? "text" : "password"}
+						type={isVisible ? 'text' : 'password'}
 						placeholder="Password"
 						name="password"
 						onChange={handleInputChange}
@@ -293,10 +244,10 @@ const Auth = () => {
 				<button
 					type="submit"
 					className={`mx-auto w-full md:w-[45%] text-white bg-gray-800 p-3 rounded-full block my-2 ${
-						loading && "bg-neutral-200 text-black"
+						loading && 'bg-neutral-200 text-black'
 					}`}
 				>
-					{loading ? "processing..." : isSignup ? "Signup" : "Signin"}
+					{loading ? 'processing...' : isSignup ? 'Signup' : 'Signin'}
 				</button>
 			</form>
 			<dialog
