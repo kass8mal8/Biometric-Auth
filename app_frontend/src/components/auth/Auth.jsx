@@ -11,7 +11,7 @@ import { useNavigate } from 'react-router-dom';
 
 const Auth = () => {
 	const [isSignup, setIsSignup] = useState(false);
-	const { post, loading } = usePost(
+	const { post, loading, error } = usePost(
 		`/auth/${isSignup ? 'signup' : 'signin'}`
 	);
 	const [userDetails, setUserDetails] = useState({
@@ -22,19 +22,78 @@ const Auth = () => {
 	const [isVisible, setIsVisible] = useState(false);
 	const [isOpen, setIsOpen] = useState(false);
 	const modalRef = useRef();
-	const { user } = useAuthContext();
-	const navigate = useNavigate();
+	const [errors, setErrors] = useState({
+		email: [],
+		password: [],
+		admission_number: [],
+	});
+	const faculties = ['CIT', 'BUS', 'SCT', 'ENG', 'MCS', 'SST'];
 
 	const handleInputChange = async (e) => {
 		const { name, value } = e.target;
 		setUserDetails({ ...userDetails, [name]: value });
+
+		// Create a new errors object
+		const newErrors = { ...errors };
+
+		if (name === 'email') {
+			// Validate email format using regex
+			const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+			newErrors.email = !emailRegex.test(value)
+				? ['Invalid email format']
+				: [];
+		}
+
+		if (name === 'password') {
+			// Validate password strength
+			// Updated password regex that allows special characters
+			const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+
+			newErrors.password = !passwordRegex.test(value)
+				? [
+						'Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, and one number',
+				  ]
+				: [];
+		}
+
+		if (name === 'admission_number') {
+			const admissionNumberRegex = /^[A-Z]{3}-\d{3}-\d{3}\/\d{4}$/;
+			const d = new Date();
+			const currentYear = d.getFullYear().toString();
+
+			if (value.length === 16) {
+				const year = value.split('/')[1];
+				const faculty = value.split('-')[0].toUpperCase();
+
+				if (
+					!admissionNumberRegex.test(value) ||
+					!faculties.includes(faculty) ||
+					year >= currentYear
+				) {
+					newErrors.admission_number = ['Invalid admission number'];
+				}
+			} else if (value.length === 1) {
+				newErrors.admission_number = ['Invalid admission number'];
+			} else {
+				newErrors.admission_number = [];
+			}
+		}
+
+		setErrors(newErrors);
 	};
 
 	const handleAuth = async (e) => {
 		e.preventDefault();
 		try {
 			// Step 1: Signup or Signin
-			await post(userDetails);
+
+			if (!Object.values(errors).flat().length === 0) {
+				return;
+			} else {
+				const res = await post(userDetails);
+				console.log(res);
+			}
+			console.log(error);
 
 			// Step 2: Handle passkey registration or verification
 			if (isSignup) {
@@ -45,7 +104,12 @@ const Auth = () => {
 				// await verifyPasskey(userDetails?.email); // Verify passkey during signin
 			}
 		} catch (error) {
-			console.log('Error:', error);
+			console.log('Error:', error.message.split(':')[2]);
+			const errorMessage =
+				error.message.split(':')[2] === ' email_1 dup key'
+					? 'Email already exists'
+					: 'Admission number already exists';
+			isSignup ? alert(errorMessage) : alert(error.message);
 		}
 	};
 
@@ -214,16 +278,37 @@ const Auth = () => {
 					placeholder="Email"
 					name="email"
 					onChange={handleInputChange}
-					className="p-3 focus:outline-none border border-neutral-400 rounded-full block mx-auto my-4 w-full md:w-[45%]"
+					className={`${
+						errors.email.length > 0
+							? 'border border-red-400'
+							: 'border border-neutral-400'
+					} p-3 focus:outline-none rounded-full block mx-auto my-4 w-full md:w-[45%]`}
 				/>
+				{errors.email.length > 0 && (
+					<p className="text-red-500 text-sm ml-4 md:ml-[27.5%] -mt-2 mb-2">
+						{errors.email[0]}
+					</p>
+				)}
+
 				{isSignup && (
-					<input
-						type="text"
-						placeholder="admission_number"
-						name="admission_number"
-						onChange={handleInputChange}
-						className="p-3 focus:outline-none border border-neutral-400 rounded-full block mx-auto my-3 w-full md:w-[45%]"
-					/>
+					<>
+						<input
+							type="text"
+							placeholder="Admission Number"
+							name="admission_number"
+							onChange={handleInputChange}
+							className={`${
+								errors.admission_number.length > 0
+									? 'border border-red-400'
+									: 'border border-neutral-400'
+							} p-3 focus:outline-none rounded-full block mx-auto my-4 w-full md:w-[45%]`}
+						/>
+						{errors.admission_number.length > 0 && (
+							<p className="text-red-500 text-sm ml-4 md:ml-[27.5%] -mt-2 mb-2">
+								{errors.admission_number[0]}
+							</p>
+						)}
+					</>
 				)}
 
 				<aside className="relative">
@@ -232,8 +317,17 @@ const Auth = () => {
 						placeholder="Password"
 						name="password"
 						onChange={handleInputChange}
-						className="p-3 focus:outline-none border border-neutral-400 rounded-full block mx-auto my-4 w-full md:w-[45%]"
+						className={`${
+							errors.password.length > 0
+								? 'border border-red-400'
+								: 'border border-neutral-400'
+						} p-3 focus:outline-none rounded-full block mx-auto my-4 w-full md:w-[45%]`}
 					/>
+					{errors.password.length > 0 && (
+						<p className="text-red-500 text-sm ml-4 md:ml-[27.5%] -mt-2 mb-2">
+							{errors.password[0]}
+						</p>
+					)}
 					<img
 						src={!isVisible ? pass_visible : pass_hidden}
 						alt="visibility"
